@@ -97,6 +97,10 @@ Then open:
   - `POST /users/{user_id}/follow`
   - `DELETE /users/{user_id}/follow`
   - `GET /users/{user_id}/profile`
+  - `GET /users/{user_id}/followers`
+  - `GET /users/{user_id}/following`
+  - `GET /users/profile/me`
+  - `PUT /users/profile/me`
 
 ## Notes
 

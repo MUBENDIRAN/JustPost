@@ -2,7 +2,7 @@ from collections.abc import AsyncGenerator
 import uuid
 import os
 from urllib.parse import quote_plus
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, String, Text, DateTime, Date, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, relationship
@@ -65,6 +65,12 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     posts    = relationship(argument="Post",    back_populates="user",      cascade="all, delete-orphan")
     likes    = relationship(argument="Like",    back_populates="user",      cascade="all, delete-orphan")
     comments = relationship(argument="Comment", back_populates="user",      cascade="all, delete-orphan")
+    profile  = relationship(
+        argument="UserProfile",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False
+    )
     followers = relationship(
         argument="Follow",
         foreign_keys="Follow.following_id",
@@ -132,6 +138,23 @@ class Follow(Base):
 
     follower  = relationship(argument="User", foreign_keys=[follower_id],  back_populates="following")
     following = relationship(argument="User", foreign_keys=[following_id], back_populates="followers")
+
+
+class UserProfile(Base):
+    __tablename__ = "user_profiles"
+
+    id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id         = Column(UUID(as_uuid=True), ForeignKey("user.id"), nullable=False, unique=True)
+    custom_username = Column(String(50), nullable=True, unique=True)
+    birthday        = Column(Date, nullable=True)
+    created_at      = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at      = Column(
+        DateTime,
+        default=datetime.datetime.utcnow,
+        onupdate=datetime.datetime.utcnow,
+    )
+
+    user = relationship(argument="User", back_populates="profile")
 
 
 engine = create_async_engine(DATABASE_URL)
