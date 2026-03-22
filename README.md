@@ -114,3 +114,12 @@ Open:
   - `GET /users/{user_id}/following`
   - `GET /users/profile/me`
   - `PUT /users/profile/me`
+
+## WorkFlow
+
+![alt text](worflow(justpost)-1.jpeg)
+
+## 🎥 Demo Video
+
+Watch the full project demo here:  
+https://youtu.be/v0czx0QKHss
