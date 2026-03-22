@@ -1,6 +1,19 @@
-# JustPost Social App
+<h1 align="left">
+  <img src="./justpost(logo).jpeg" alt="JustPost logo" width="48" style="vertical-align: middle; margin-right: 10px;" />
+  <span style="vertical-align: middle;">JustPost</span>
+</h1>
 
-JustPost is a small social media app with a FastAPI backend and a Streamlit frontend. Users can register, log in, upload image/video posts, like posts, and comment in a simple feed.
+JustPost is a social app with a `FastAPI` backend and a `Streamlit` frontend. Users can sign up, log in, upload image/video posts, like posts, comment, follow/unfollow other users, and manage profile details (custom username + birthday).
+
+## Features
+
+- JWT auth with `fastapi-users`
+- Image and video uploads via ImageKit
+- Feed with likes and comments
+- Follow / unfollow users
+- Profile stats (followers, following, posts)
+- Profile editing (`custom_username`, `birthday`)
+- Shareable media links from the frontend
 
 ## Tech Stack
 
@@ -13,17 +26,17 @@ JustPost is a small social media app with a FastAPI backend and a Streamlit fron
 
 ```text
 app/
-  main.py       # API routes
-  db.py         # DB models + connection/session setup
-  users.py      # FastAPI Users auth config
-  schemas.py    # Pydantic schemas
+  main.py       # API routes and business logic
+  db.py         # DB models + async connection/session setup
+  users.py      # FastAPI Users auth configuration
+  schemas.py    # User/Post schemas
 frontend.py     # Streamlit client app
 ```
 
 ## Prerequisites
 
 - Python `3.12+`
-- PostgreSQL database
+- PostgreSQL
 - ImageKit account (private key required)
 
 ## Installation
@@ -36,13 +49,13 @@ pip install -r requirements.txt
 
 ## Environment Variables
 
-Create a `.env` file (or export vars in your shell):
+Create a `.env` file in the project root:
 
 ```env
-# Option 1: full URL
+# Option 1: full database URL
 DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@HOST:5432/DB_NAME
 
-# Option 2: individual PG vars (if DATABASE_URL is not set)
+# Option 2: separate PG vars (used when DATABASE_URL is not set)
 PGHOST=localhost
 PGPORT=5432
 PGDATABASE=justpost
@@ -50,14 +63,14 @@ PGUSER=postgres
 PGPASSWORD=postgres
 PGSSLMODE=prefer
 
-# Required for media upload
+# Required for upload API
 IMAGEKIT_PRIVATE_KEY=your_imagekit_private_key
 
-# Optional (frontend defaults to http://localhost:8000)
+# Optional (frontend default)
 BASE_URL=http://localhost:8000
 ```
 
-## Running the App
+## Run the App
 
 Start backend:
 
@@ -71,29 +84,29 @@ Start frontend (new terminal):
 streamlit run frontend.py
 ```
 
-Then open:
+Open:
 
 - API docs: `http://localhost:8000/docs`
 - Frontend: `http://localhost:8501`
 
 ## Main API Endpoints
 
-- Auth:
+- Auth
   - `POST /auth/register`
   - `POST /auth/jwt/login`
   - `GET /auth/me`
-- Posts:
+- Posts
   - `POST /upload`
   - `GET /feed`
   - `DELETE /posts/{post_id}`
-- Likes:
+- Likes
   - `POST /posts/{post_id}/like`
   - `DELETE /posts/{post_id}/like`
-- Comments:
+- Comments
   - `POST /posts/{post_id}/comments`
   - `GET /posts/{post_id}/comments`
   - `DELETE /comments/{comment_id}`
-- Follow/Profile:
+- Follow & Profile
   - `POST /users/{user_id}/follow`
   - `DELETE /users/{user_id}/follow`
   - `GET /users/{user_id}/profile`
@@ -101,8 +114,3 @@ Then open:
   - `GET /users/{user_id}/following`
   - `GET /users/profile/me`
   - `PUT /users/profile/me`
-
-## Notes
-
-- `app/users.py` currently contains a placeholder JWT secret (`CHANGE_THIS_TO_A_LONG_RANDOM_SECRET`). Replace it before production use.
-- Tables are created automatically on backend startup.

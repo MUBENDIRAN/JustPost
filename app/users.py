@@ -6,7 +6,7 @@ from fastapi_users.authentication import AuthenticationBackend, BearerTransport,
 from fastapi_users.db import SQLAlchemyUserDatabase
 from app.db import User, get_user_db
 
-SECRET = "CHANGE_THIS_TO_A_LONG_RANDOM_SECRET"
+SECRET = "LONG_RANDOM_SECRET"
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
