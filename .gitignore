@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 .venv/
 app/__pycache__/
+*.mp4

@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import os
+import time
 from datetime import date
 import html
 from streamlit.components.v1 import html as st_html
@@ -9,6 +10,8 @@ st.set_page_config(page_title="JustPost", layout="wide")
 
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 LOGO_PATH = "justpost(logo).jpeg"
+BACKEND_WAKEUP_TIMEOUT_SECONDS = 60
+BACKEND_WAKEUP_STEP_TIMEOUT_SECONDS = 15
 
 if 'token' not in st.session_state:
     st.session_state.token = None
@@ -20,6 +23,10 @@ if 'upload_notice' not in st.session_state:
     st.session_state.upload_notice = None
 if 'redirect_to_feed' not in st.session_state:
     st.session_state.redirect_to_feed = False
+if 'backend_ready' not in st.session_state:
+    st.session_state.backend_ready = False
+if 'backend_wakeup_error' not in st.session_state:
+    st.session_state.backend_wakeup_error = None
 
 
 def get_headers():
@@ -31,6 +38,31 @@ def get_headers():
 def api(method, path, **kwargs):
     """Central API call helper — always sends auth headers."""
     return requests.request(method, f"{BASE_URL}{path}", headers=get_headers(), **kwargs)
+
+
+def ensure_backend_ready():
+    if st.session_state.get("backend_ready"):
+        return True
+
+    last_error = None
+    with st.spinner("Waking backend service, please wait..."):
+        start_time = time.time()
+        while (time.time() - start_time) < BACKEND_WAKEUP_TIMEOUT_SECONDS:
+            try:
+                response = requests.get(
+                    f"{BASE_URL}/health",
+                    timeout=BACKEND_WAKEUP_STEP_TIMEOUT_SECONDS,
+                )
+                if response.status_code == 200:
+                    st.session_state.backend_ready = True
+                    st.session_state.backend_wakeup_error = None
+                    return True
+                last_error = f"Backend responded with status {response.status_code}."
+            except requests.RequestException as exc:
+                last_error = str(exc)
+            time.sleep(2)
+    st.session_state.backend_wakeup_error = last_error or "Timed out waiting for backend wake-up."
+    return False
 
 def login_page():
     if os.path.exists(LOGO_PATH):
@@ -369,6 +401,17 @@ def profile_page():
                             st.rerun()
                         else:
                             st.error(action_resp.json().get("detail", "Action failed"))
+
+if not ensure_backend_ready():
+    st.error("Backend service is still starting.")
+    st.caption(
+        st.session_state.backend_wakeup_error
+        or "Please wait a moment and retry."
+    )
+    if st.button("Retry backend connection", type="primary"):
+        st.session_state.backend_ready = False
+        st.rerun()
+    st.stop()
 
 if st.session_state.user is None:
     login_page()

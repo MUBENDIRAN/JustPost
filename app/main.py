@@ -110,6 +110,10 @@ app.include_router(fastapi_users.get_reset_password_router(),            prefix=
 app.include_router(fastapi_users.get_verify_router(UserRead),            prefix="/auth",     tags=["auth"])
 app.include_router(fastapi_users.get_users_router(UserRead, UserUpdate), prefix="/auth",     tags=["auth"])
 
+@app.get("/health", tags=["health"])
+async def health_check():
+    return {"status": "ok"}
+
 @app.post("/upload", tags=["posts"])
 async def upload_file(
     file: UploadFile = File(...),

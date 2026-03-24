@@ -70,6 +70,8 @@ IMAGEKIT_PRIVATE_KEY=your_imagekit_private_key
 BASE_URL=http://localhost:8000
 ```
 
+For Render deployment, set frontend `BASE_URL` to your backend public URL (for example, `https://your-backend-service.onrender.com`).
+
 ## Run the App
 
 Start backend:
@@ -88,6 +90,11 @@ Open:
 
 - API docs: `http://localhost:8000/docs`
 - Frontend: `http://localhost:8501`
+
+## Render Free Tier Note
+
+Render free web services sleep after inactivity and wake independently.  
+This app proactively calls backend `/health` from the frontend startup so that opening the frontend URL also wakes the backend for visitors.
 
 ## Main API Endpoints
 
