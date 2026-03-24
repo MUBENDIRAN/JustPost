@@ -94,7 +94,7 @@ Open:
 ## Render Free Tier Note
 
 Render free web services sleep after inactivity and wake independently.  
-This app proactively calls backend `/health` from the frontend startup so that opening the frontend URL also wakes the backend for visitors.
+This app sends a one-time, non-blocking backend `/health` ping on frontend startup so opening the frontend URL can wake the backend without delaying frontend render.
 
 ## Main API Endpoints
 
