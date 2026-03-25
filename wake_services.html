@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JustPost - Loading...</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: white;
+        }
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+        }
+        h1 {
+            margin: 0 0 20px 0;
+            font-size: 2.5em;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            font-size: 1.1em;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .service {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .ready { background: rgba(34, 197, 94, 0.3) !important; }
+        .error { background: rgba(239, 68, 68, 0.3) !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 JustPost</h1>
+        <div class="spinner"></div>
+        <div class="status" id="status">Waking up services...</div>
+        
+        <div class="service" id="frontend-status">
+            <span>Frontend</span>
+            <span id="frontend-text">⏳ Starting...</span>
+        </div>
+        <div class="service" id="backend-status">
+            <span>Backend</span>
+            <span id="backend-text">⏳ Starting...</span>
+        </div>
+        
+        <div style="margin-top: 25px; padding: 15px; background: rgba(255, 255, 255, 0.15); border-radius: 10px; font-size: 0.9em; line-height: 1.6;">
+            <p style="margin: 0 0 10px 0;">
+                <strong>💡 Why am I seeing this?</strong>
+            </p>
+            <p style="margin: 0; opacity: 0.9;">
+                We're using free hosting that goes to sleep after inactivity to save resources. 
+                When you're the first visitor after a while, we need about a minute to wake everything up. 
+                Thanks for your patience! 🙏
+            </p>
+        </div>
+        
+        <p style="margin-top: 15px; opacity: 0.7; font-size: 0.85em;">
+            Next time you visit, it'll load instantly if services are already awake!
+        </p>
+    </div>
+
+    <script>
+        // CONFIGURE THESE URLs
+        const FRONTEND_URL = 'https://justpost-frontend-97ea.onrender.com/'; 
+        const BACKEND_URL = 'https://justpost-vb0a.onrender.com';   
+        
+        let frontendReady = false;
+        let backendReady = false;
+        
+        function updateStatus() {
+            const status = document.getElementById('status');
+            
+            if (frontendReady && backendReady) {
+                status.textContent = '✅ All services ready! Redirecting...';
+                setTimeout(() => {
+                    window.location.href = FRONTEND_URL;
+                }, 1000);
+            } else if (frontendReady) {
+                status.textContent = '⏳ Waiting for backend...';
+            } else if (backendReady) {
+                status.textContent = '⏳ Waiting for frontend...';
+            }
+        }
+        
+        // Ping frontend (main app)
+        function pingFrontend() {
+            fetch(FRONTEND_URL, { method: 'HEAD', mode: 'no-cors' })
+                .then(() => {
+                    frontendReady = true;
+                    document.getElementById('frontend-status').classList.add('ready');
+                    document.getElementById('frontend-text').textContent = '✅ Ready';
+                    updateStatus();
+                })
+                .catch(() => {
+                    setTimeout(pingFrontend, 5000); // Retry every 5 seconds
+                });
+        }
+        
+        // Ping backend health endpoint
+        function pingBackend() {
+            fetch(`${BACKEND_URL}/health`, { method: 'GET' })
+                .then(response => {
+                    if (response.ok) {
+                        backendReady = true;
+                        document.getElementById('backend-status').classList.add('ready');
+                        document.getElementById('backend-text').textContent = '✅ Ready';
+                        updateStatus();
+                    } else {
+                        setTimeout(pingBackend, 5000);
+                    }
+                })
+                .catch(() => {
+                    setTimeout(pingBackend, 5000); // Retry every 5 seconds
+                });
+        }
+        
+        // Start pinging both services SIMULTANEOUSLY
+        pingFrontend();
+        pingBackend();
+        
+        // Also set a maximum timeout (2 minutes)
+        setTimeout(() => {
+            if (!frontendReady || !backendReady) {
+                document.getElementById('status').textContent = '⚠️ Taking longer than expected...';
+                document.getElementById('status').innerHTML += '<br><small>Trying direct access...</small>';
+                setTimeout(() => {
+                    window.location.href = FRONTEND_URL;
+                }, 3000);
+            }
+        }, 120000);
+    </script>
+</body>
+</html>
