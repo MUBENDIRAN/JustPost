@@ -22,8 +22,6 @@ if 'redirect_to_feed' not in st.session_state:
     st.session_state.redirect_to_feed = False
 if 'backend_wakeup_attempted' not in st.session_state:
     st.session_state.backend_wakeup_attempted = False
-if 'backend_wakeup_error' not in st.session_state:
-    st.session_state.backend_wakeup_error = None
 
 
 def get_headers():
@@ -38,19 +36,79 @@ def api(method, path, **kwargs):
 
 
 def wake_backend_once():
+    """
+    Wake up the backend using client-side JavaScript.
+    This makes the browser (not the server) ping the backend,
+    which helps wake up Render free tier services.
+    """
     if st.session_state.get("backend_wakeup_attempted"):
         return
 
-    try:
-        response = requests.get(f"{BASE_URL}/health", timeout=(1, 2))
-        if response.status_code != 200:
-            st.session_state.backend_wakeup_error = f"Backend wake-up returned status {response.status_code}."
-        else:
-            st.session_state.backend_wakeup_error = None
-    except requests.RequestException as exc:
-        st.session_state.backend_wakeup_error = str(exc)
-    finally:
-        st.session_state.backend_wakeup_attempted = True
+    # Client-side JavaScript to ping backend from the user's browser
+    wake_js = f"""
+    <div id="backend-status" style="padding:10px;background:#f0f9ff;border-radius:6px;margin:10px 0;text-align:center;">
+        <span id="status-text">🔄 Waking up backend service...</span>
+    </div>
+    <script>
+        (function() {{
+            const statusDiv = document.getElementById('backend-status');
+            const statusText = document.getElementById('status-text');
+            const backendUrl = '{BASE_URL}/health';
+            
+            // Show loading message
+            statusText.textContent = '🔄 Waking up backend service... (this may take 30-60 seconds)';
+            
+            // Ping backend from client side
+            fetch(backendUrl, {{
+                method: 'GET',
+                mode: 'cors',
+                cache: 'no-cache'
+            }})
+            .then(response => {{
+                if (response.ok) {{
+                    statusText.textContent = '✅ Backend is ready!';
+                    statusDiv.style.background = '#d1fae5';
+                    setTimeout(() => {{
+                        statusDiv.style.display = 'none';
+                    }}, 2000);
+                }} else {{
+                    statusText.textContent = '⚠️ Backend responded with status ' + response.status;
+                    statusDiv.style.background = '#fef3c7';
+                }}
+            }})
+            .catch(error => {{
+                // If first attempt fails, try again after 10 seconds
+                statusText.textContent = '🔄 Backend is spinning up... retrying...';
+                setTimeout(() => {{
+                    fetch(backendUrl, {{
+                        method: 'GET',
+                        mode: 'cors',
+                        cache: 'no-cache'
+                    }})
+                    .then(response => {{
+                        if (response.ok) {{
+                            statusText.textContent = '✅ Backend is ready!';
+                            statusDiv.style.background = '#d1fae5';
+                            setTimeout(() => {{
+                                statusDiv.style.display = 'none';
+                            }}, 2000);
+                        }} else {{
+                            statusText.textContent = '⚠️ Backend may take longer to start. Please refresh.';
+                            statusDiv.style.background = '#fee2e2';
+                        }}
+                    }})
+                    .catch(err => {{
+                        statusText.textContent = '⚠️ Backend not responding. Check if BASE_URL is correct.';
+                        statusDiv.style.background = '#fee2e2';
+                    }});
+                }}, 10000);
+            }});
+        }})();
+    </script>
+    """
+    
+    st_html(wake_js, height=60)
+    st.session_state.backend_wakeup_attempted = True
 
 def login_page():
     if os.path.exists(LOGO_PATH):
