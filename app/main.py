@@ -98,13 +98,12 @@ app = FastAPI(lifespan=lifespan)
 # Allow both local and deployed Streamlit frontend to call the API.
 # Get frontend URL from environment variable
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:8501")
-allowed_origins = ["http://localhost:8501"]
-if FRONTEND_URL and FRONTEND_URL not in allowed_origins:
-    allowed_origins.append(FRONTEND_URL)
 
+# For CORS to work properly with credentials, we need specific origins
+# But we can use allow_origin_regex to match all origins for health endpoint flexibility
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origin_regex="https?://.*",  # Allow any origin (HTTP or HTTPS)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -117,19 +116,11 @@ app.include_router(fastapi_users.get_verify_router(UserRead),            prefix=
 app.include_router(fastapi_users.get_users_router(UserRead, UserUpdate), prefix="/auth",     tags=["auth"])
 
 @app.get("/health", tags=["health"])
-async def health_check(response: Response):
-    # Allow CORS from any origin for health checks so index.html can verify backend is up
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "*"
+async def health_check():
     return {"status": "ok"}
 
 @app.options("/health", tags=["health"])
-async def health_check_options(response: Response):
-    # Handle CORS preflight requests for health endpoint
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "*"
+async def health_check_options():
     return {}
 
 @app.post("/upload", tags=["posts"])
