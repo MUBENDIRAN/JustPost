@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Depends
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Depends, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.schemas import PostCreate, PostResponse, UserRead, UserCreate, UserUpdate
 from app.db import (
@@ -117,8 +117,20 @@ app.include_router(fastapi_users.get_verify_router(UserRead),            prefix=
 app.include_router(fastapi_users.get_users_router(UserRead, UserUpdate), prefix="/auth",     tags=["auth"])
 
 @app.get("/health", tags=["health"])
-async def health_check():
+async def health_check(response: Response):
+    # Allow CORS from any origin for health checks so index.html can verify backend is up
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
     return {"status": "ok"}
+
+@app.options("/health", tags=["health"])
+async def health_check_options(response: Response):
+    # Handle CORS preflight requests for health endpoint
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return {}
 
 @app.post("/upload", tags=["posts"])
 async def upload_file(
