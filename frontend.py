@@ -35,6 +35,32 @@ def api(method, path, **kwargs):
     return requests.request(method, f"{BASE_URL}{path}", headers=get_headers(), **kwargs)
 
 
+def get_user_friendly_error(response, default_message="Something went wrong. Please try again."):
+    """
+    Convert backend error responses into user-friendly messages.
+    Users shouldn't see technical error codes like 404, 500, etc.
+    """
+    if response.status_code == 404:
+        return "We couldn't find what you're looking for. It may have been deleted or moved."
+    elif response.status_code == 401:
+        return "Your session has expired. Please log in again."
+    elif response.status_code == 403:
+        return "You don't have permission to do that."
+    elif response.status_code == 500 or response.status_code >= 500:
+        return "Our servers are experiencing issues. Please try again in a moment."
+    elif response.status_code == 503:
+        return "The service is temporarily unavailable. Please try again shortly."
+    elif response.status_code >= 400:
+        try:
+            detail = response.json().get('detail', '')
+            if detail and not any(code in str(detail).lower() for code in ['404', '500', '401', '403', 'error']):
+                return detail
+        except:
+            pass
+        return default_message
+    return default_message
+
+
 def wake_backend_once():
     """
     Wake up the backend using client-side JavaScript.
@@ -134,7 +160,7 @@ def login_page():
                         st.session_state.user = user_resp.json()
                         st.rerun()
                     else:
-                        st.error("Failed to get user info")
+                        st.error("Unable to retrieve your account information. Please try logging in again.")
                 else:
                     st.error("Invalid email or password!")
 
@@ -147,7 +173,8 @@ def login_page():
                 if response.status_code == 201:
                     st.success("Account created! Click Login now.")
                 else:
-                    st.error(f"Registration failed: {response.json().get('detail', '')}")
+                    error_msg = get_user_friendly_error(response, "Unable to create account. Please check your email and password.")
+                    st.error(error_msg)
     else:
         st.info("Enter your email and password above")
 
@@ -172,7 +199,8 @@ def upload_page():
                 st.session_state.redirect_to_feed = True
                 st.rerun()
             else:
-                st.error(f"Upload failed: {response.json().get('detail', '')}")
+                error_msg = get_user_friendly_error(response, "Unable to upload your post. Please try again.")
+                st.error(error_msg)
 
 def create_transformed_url(original_url, transformation_params, caption=None):
     if not transformation_params:
@@ -238,7 +266,8 @@ def feed_page():
 
     response = api("GET", "/feed")
     if response.status_code != 200:
-        st.error("Failed to load feed")
+        error_msg = get_user_friendly_error(response, "Unable to load your feed right now. Please refresh the page.")
+        st.error(error_msg)
         return
 
     posts = response.json()["posts"]
@@ -258,7 +287,7 @@ def feed_page():
                 if st.button(follow_label, key=f"follow_{post['id']}"):
                     author_id = post.get("author_id")
                     if not author_id:
-                        st.error("Cannot follow this user right now.")
+                        st.error("Unable to follow this user at the moment. Please try again.")
                     else:
                         if post.get("is_following_author"):
                             follow_resp = api("DELETE", f"/users/{author_id}/follow")
@@ -268,8 +297,8 @@ def feed_page():
                         if follow_resp.status_code == 200:
                             st.rerun()
                         else:
-                            detail = follow_resp.json().get("detail", "Follow action failed")
-                            st.error(detail)
+                            error_msg = get_user_friendly_error(follow_resp, "Unable to update follow status. Please try again.")
+                            st.error(error_msg)
         with col3:
             if post.get('is_owner'):
                 if st.button("🗑️", key=f"del_{post['id']}", help="Delete post"):
@@ -278,7 +307,8 @@ def feed_page():
                         st.success("Post deleted!")
                         st.rerun()
                     else:
-                        st.error("Failed to delete post!")
+                        error_msg = get_user_friendly_error(del_resp, "Unable to delete post. Please try again.")
+                        st.error(error_msg)
 
         caption = post.get('caption', '')
         if post['file_type'] == 'image':
@@ -332,13 +362,14 @@ def profile_page():
     st.title("👤 Profile")
     me_resp = api("GET", "/users/profile/me")
     if me_resp.status_code != 200:
-        st.error("Failed to load your profile")
+        error_msg = get_user_friendly_error(me_resp, "Unable to load your profile. Please refresh the page.")
+        st.error(error_msg)
         return
 
     me = me_resp.json()
     user_id = st.session_state.user.get("id")
     if not user_id:
-        st.error("Missing user id")
+        st.error("Unable to load your profile information. Please try logging in again.")
         return
 
     st.markdown(f"**Email:** {me.get('email', '')}")
@@ -380,8 +411,8 @@ def profile_page():
             st.success("Profile updated")
             st.rerun()
         else:
-            detail = update_resp.json().get("detail", "Failed to update profile")
-            st.error(detail)
+            error_msg = get_user_friendly_error(update_resp, "Unable to update your profile. Please check your information and try again.")
+            st.error(error_msg)
 
     stats_resp = api("GET", f"/users/{user_id}/profile")
     if stats_resp.status_code == 200:
@@ -398,7 +429,7 @@ def profile_page():
         st.subheader("Followers")
         followers_resp = api("GET", f"/users/{user_id}/followers")
         if followers_resp.status_code != 200:
-            st.caption("Could not load followers.")
+            st.caption("Unable to load followers at the moment.")
         else:
             followers = followers_resp.json().get("followers", [])
             if not followers:
@@ -419,13 +450,14 @@ def profile_page():
                         if action_resp.status_code == 200:
                             st.rerun()
                         else:
-                            st.error(action_resp.json().get("detail", "Action failed"))
+                            error_msg = get_user_friendly_error(action_resp, "Unable to complete this action. Please try again.")
+                            st.error(error_msg)
 
     with right:
         st.subheader("Following")
         following_resp = api("GET", f"/users/{user_id}/following")
         if following_resp.status_code != 200:
-            st.caption("Could not load following.")
+            st.caption("Unable to load following at the moment.")
         else:
             following = following_resp.json().get("following", [])
             if not following:
@@ -446,7 +478,8 @@ def profile_page():
                         if action_resp.status_code == 200:
                             st.rerun()
                         else:
-                            st.error(action_resp.json().get("detail", "Action failed"))
+                            error_msg = get_user_friendly_error(action_resp, "Unable to complete this action. Please try again.")
+                            st.error(error_msg)
 
 wake_backend_once()
 
