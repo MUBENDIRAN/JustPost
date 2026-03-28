@@ -20,8 +20,6 @@ if 'upload_notice' not in st.session_state:
     st.session_state.upload_notice = None
 if 'redirect_to_feed' not in st.session_state:
     st.session_state.redirect_to_feed = False
-if 'backend_wakeup_attempted' not in st.session_state:
-    st.session_state.backend_wakeup_attempted = False
 
 
 def get_headers():
@@ -60,81 +58,6 @@ def get_user_friendly_error(response, default_message="Something went wrong. Ple
         return default_message
     return default_message
 
-
-def wake_backend_once():
-    """
-    Wake up the backend using client-side JavaScript.
-    This makes the browser (not the server) ping the backend,
-    which helps wake up Render free tier services.
-    """
-    if st.session_state.get("backend_wakeup_attempted"):
-        return
-
-    # Client-side JavaScript to ping backend from the user's browser
-    wake_js = f"""
-    <div id="backend-status" style="padding:10px;background:#f0f9ff;border-radius:6px;margin:10px 0;text-align:center;">
-        <span id="status-text">🔄 Waking up backend service...</span>
-    </div>
-    <script>
-        (function() {{
-            const statusDiv = document.getElementById('backend-status');
-            const statusText = document.getElementById('status-text');
-            const backendUrl = '{BASE_URL}/health';
-            
-            // Show loading message
-            statusText.textContent = '🔄 Waking up backend service... (this may take 30-60 seconds)';
-            
-            // Ping backend from client side
-            fetch(backendUrl, {{
-                method: 'GET',
-                mode: 'cors',
-                cache: 'no-cache'
-            }})
-            .then(response => {{
-                if (response.ok) {{
-                    statusText.textContent = '✅ Backend is ready!';
-                    statusDiv.style.background = '#d1fae5';
-                    setTimeout(() => {{
-                        statusDiv.style.display = 'none';
-                    }}, 2000);
-                }} else {{
-                    statusText.textContent = '⚠️ Backend responded with status ' + response.status;
-                    statusDiv.style.background = '#fef3c7';
-                }}
-            }})
-            .catch(error => {{
-                // If first attempt fails, try again after 10 seconds
-                statusText.textContent = '🔄 Backend is spinning up... retrying...';
-                setTimeout(() => {{
-                    fetch(backendUrl, {{
-                        method: 'GET',
-                        mode: 'cors',
-                        cache: 'no-cache'
-                    }})
-                    .then(response => {{
-                        if (response.ok) {{
-                            statusText.textContent = '✅ Backend is ready!';
-                            statusDiv.style.background = '#d1fae5';
-                            setTimeout(() => {{
-                                statusDiv.style.display = 'none';
-                            }}, 2000);
-                        }} else {{
-                            statusText.textContent = '⚠️ Backend may take longer to start. Please refresh.';
-                            statusDiv.style.background = '#fee2e2';
-                        }}
-                    }})
-                    .catch(err => {{
-                        statusText.textContent = '⚠️ Backend not responding. Check if BASE_URL is correct.';
-                        statusDiv.style.background = '#fee2e2';
-                    }});
-                }}, 10000);
-            }});
-        }})();
-    </script>
-    """
-    
-    st_html(wake_js, height=60)
-    st.session_state.backend_wakeup_attempted = True
 
 def login_page():
     if os.path.exists(LOGO_PATH):
@@ -480,8 +403,6 @@ def profile_page():
                         else:
                             error_msg = get_user_friendly_error(action_resp, "Unable to complete this action. Please try again.")
                             st.error(error_msg)
-
-wake_backend_once()
 
 if st.session_state.user is None:
     login_page()
